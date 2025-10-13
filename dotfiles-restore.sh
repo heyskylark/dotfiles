@@ -93,6 +93,14 @@ git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/p
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
 git clone https://github.com/tom-doerr/zsh_codex.git ~/.oh-my-zsh/custom/plugins/zsh_codex
 
+# setup pacman hook to update pkglist file automatically
+pacman-setup-hooks "$PKG_FILE"
+
+# setup keepassxc password
+echo "Configuring secret-tool for KeePassXC"
+echo "Please enter KeePassXC database.kdbx password:"
+secret-tool store --label='KeePassXC' 'keepass' 'default'
+
 # gtk theme options
 gsettings set org.gnome.desktop.interface color-scheme prefer-dark
 gsettings set org.gtk.Settings.FileChooser startup-mode cwd
