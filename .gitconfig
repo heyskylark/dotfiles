@@ -3,3 +3,11 @@
 [user]
 	name = Brandon Feist
 	email = brandon.feist@hey.com
+[core]
+	editor = nvim
+[credential "https://github.com"]
+	helper =
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !gh auth git-credential

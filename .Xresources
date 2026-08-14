@@ -1,0 +1,63 @@
+! xterm tuned to match ~/.config/alacritty/alacritty.toml
+
+XTerm*termName: xterm-256color
+XTerm*utf8: 1
+XTerm*locale: true
+
+! Font / window shape
+XTerm*faceName: JetBrains Mono
+XTerm*faceSize: 12
+XTerm*geometry: 120x35
+XTerm*internalBorder: 8
+
+! Terminal behavior
+XTerm*saveLines: 10000
+XTerm*scrollBar: false
+XTerm*scrollKey: true
+XTerm*scrollTtyOutput: false
+XTerm*alternateScroll: true
+XTerm*dynamicColors: true
+XTerm*allowBoldFonts: true
+XTerm*metaSendsEscape: true
+XTerm*eightBitInput: false
+XTerm*cursorBlink: true
+XTerm*bellIsUrgent: true
+
+! Make mouse selections and copy/paste use the normal desktop clipboard.
+XTerm*selectToClipboard: true
+XTerm*keepSelection: true
+
+! Alacritty color palette
+XTerm*background: #2b2e37
+XTerm*foreground: #F2F2F2
+XTerm*cursorColor: #F2F2F2
+XTerm*color0:  #202020
+XTerm*color1:  #CC0000
+XTerm*color2:  #98c379
+XTerm*color3:  #d19a66
+XTerm*color4:  #61afef
+XTerm*color5:  #c678dd
+XTerm*color6:  #56b6c2
+XTerm*color7:  #D3D7CF
+XTerm*color8:  #88807C
+XTerm*color9:  #F15D22
+XTerm*color10: #73C48F
+XTerm*color11: #FFCE51
+XTerm*color12: #48B9C7
+XTerm*color13: #AD7FA8
+XTerm*color14: #34E2E2
+XTerm*color15: #EEEEEC
+
+! Copy/paste bindings. Mod4 covers Super/Command-style shortcuts under XWayland;
+! Mod4+Shift avoids the Hyprland Super+V toggle-floating bind, and Ctrl+Shift
+! covers the common Linux terminal shortcuts plus your swapped LWin/LCtrl.
+XTerm*VT100.translations: #override \n\
+    Ctrl Shift <Key>C: copy-selection(CLIPBOARD) \n\
+    Ctrl Shift <Key>V: insert-selection(CLIPBOARD) \n\
+    Mod4 Shift <Key>C: copy-selection(CLIPBOARD) \n\
+    Mod4 Shift <Key>V: insert-selection(CLIPBOARD) \n\
+    Mod4 <Key>C: copy-selection(CLIPBOARD) \n\
+    Mod4 <Key>V: insert-selection(CLIPBOARD) \n\
+    Ctrl <Key>plus: larger-vt-font() \n\
+    Ctrl <Key>minus: smaller-vt-font() \n\
+    Ctrl <Key>0: set-vt-font(d)

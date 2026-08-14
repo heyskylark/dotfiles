@@ -77,9 +77,13 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git)
+plugins=(
+  git
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
 
-source $ZSH/oh-my-zsh.sh
+source "$ZSH/oh-my-zsh.sh"
 
 # User configuration
 
@@ -113,9 +117,32 @@ source $ZSH/oh-my-zsh.sh
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-plugins=(
-    git                         # Git shortcuts and features
-    zsh-autosuggestions        # Fish-like autosuggestions
-    zsh-syntax-highlighting    # Fish-like syntax highlighting
-)
 
+# User-local tools. zsh's path array keeps PATH portable and duplicate-free.
+path=(
+  "$HOME/.local/bin"
+  "$HOME/.local/share/pnpm"
+  "$HOME/.local/share/npm-global/bin"
+  "$HOME/.bun/bin"
+  $path
+)
+[[ -d /opt/cuda/bin ]] && path=(/opt/cuda/bin $path)
+typeset -U path
+export PATH
+
+export NVM_DIR="$HOME/.nvm"
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  source "$NVM_DIR/nvm.sh"
+elif [[ -s /usr/share/nvm/init-nvm.sh ]]; then
+  source /usr/share/nvm/init-nvm.sh
+fi
+[[ -s "$NVM_DIR/bash_completion" ]] && source "$NVM_DIR/bash_completion"
+
+[[ -s "$HOME/.bun/_bun" ]] && source "$HOME/.bun/_bun"
+
+alias dot='git --git-dir="$HOME/dotfiles" --work-tree="$HOME"'
+
+# API keys, hardware IDs, and other host-specific values belong here.
+private_config="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/private.zsh"
+[[ -r "$private_config" ]] && source "$private_config"
+unset private_config

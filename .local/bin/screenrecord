@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Check if recording is active; if so, stop it
+if pgrep -x "wf-recorder" > /dev/null; then
+    pkill -INT -x wf-recorder
+    notify-send -t 1000 "Recording Finished"  # Requires libnotify/dunst or similar
+    exit 0
+fi
+
+# Create Videos dir if it doesn't exist
+mkdir -p ~/Videos
+
+# Generate timestamped filename
+filename="recording_$(date +%Y%m%d_%H%M%S).mp4"
+
+# Show countdown notification (optional, skip if no notify-send)
+notify-send -t 1000 "Recording Starts In" "3"
+sleep 1
+notify-send -t 1000 "Recording Starts In" "2"
+sleep 1
+notify-send -t 1000 "Recording Starts In" "1"
+sleep 1
+
+# Start recording: Select region with slurp, or full screen with '-f' flag
+# For full screen only, replace the slurp line with: wf-recorder -f ~/Videos/"$filename"
+slurp_output=$(slurp)
+if [ -n "$slurp_output" ]; then
+    wf-recorder -g "$slurp_output" -f ~/Videos/"$filename" &
+    notify-send -t 2000 "Recording" "Press the keybind again to stop. Saving to ~/Videos/$filename"
+else
+    notify-send "No area selected"
+fi
+

@@ -1,0 +1,72 @@
+# This repository uses $HOME as its work tree. Ignore everything unless it is
+# explicitly listed below; broad negations can expose credentials and app state.
+/*
+
+# Repository metadata and top-level configuration.
+!/.gitignore
+!/.bashrc
+!/.gitconfig
+!/.p10k.zsh
+!/.tmux.conf
+!/.Xresources
+!/.zshenv
+!/.zshrc
+!/dotfiles-restore.sh
+!/pkglist-*.txt
+
+# Curated XDG configuration.
+!/.config/
+/.config/*
+!/.config/alacritty/
+/.config/alacritty/*
+!/.config/alacritty/alacritty.toml
+!/.config/btop/
+/.config/btop/*
+!/.config/btop/btop.conf
+!/.config/dunst/
+/.config/dunst/*
+!/.config/dunst/dunstrc
+!/.config/gammastep/
+/.config/gammastep/*
+!/.config/gammastep/config.ini
+!/.config/hypr/
+/.config/hypr/*
+!/.config/hypr/hypridle.conf
+!/.config/hypr/hyprland.conf
+!/.config/hypr/hyprlock.conf
+!/.config/nvim/
+/.config/nvim/*
+!/.config/nvim/init.lua
+!/.config/nvim/lua/
+!/.config/nvim/lua/**
+!/.config/waybar/
+/.config/waybar/*
+!/.config/waybar/config
+!/.config/waybar/style.css
+!/.config/waybar/scripts/
+/.config/waybar/scripts/*
+!/.config/waybar/scripts/gpu.sh
+!/.config/wofi/
+/.config/wofi/*
+!/.config/wofi/config
+!/.config/wofi/style.css
+!/.config/dolphinrc
+!/.config/mimeapps.list
+!/.config/pavucontrol.ini
+!/.config/user-dirs.dirs
+!/.config/user-dirs.locale
+
+# Small helpers referenced by tracked configuration.
+!/.local/
+/.local/*
+!/.local/bin/
+/.local/bin/*
+!/.local/bin/screenrecord
+
+# Generated or private files within otherwise tracked trees.
+*.bak
+*.bak-*
+*.log
+*.lock
+*_history
+/.config/nvim/lazy-lock.json

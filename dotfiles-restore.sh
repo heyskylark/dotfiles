@@ -1,114 +1,129 @@
-#!/bin/sh
-# Warning: This will work for skylark only!
-# Run as regular user, not root!
-# Before proceeding you need to restore SSH and GPG keys.
-# SSH config must point to the GitHub's private key.
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-# Function to ask for user confirmation
-confirm() {
-	PROMPT="$1"
-	while true; do
-		echo "$PROMPT [y/n]"
-		read -r response
-		case $response in
-			[Yy]*) return 0 ;;
-			[Nn]*) return 1 ;;
-			*) echo "$PROMPT [y/n]" ;;
-		esac
-	done
+# Post-install bootstrap for an existing Arch Linux installation.
+# Run as the target user; the script uses sudo only for pacman.
+
+REPO_URL="${DOTFILES_REPO_URL:-https://github.com/heyskylark/dotfiles.git}"
+REPO_DIR="${DOTFILES_REPO_DIR:-$HOME/dotfiles}"
+PACKAGE_LIST="${1:-$HOME/pkglist-nvidia.txt}"
+BACKUP_ROOT="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-backup"
+
+die() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
 }
 
-REPO="$HOME/dotfiles"
+dotgit() {
+  git --git-dir="$REPO_DIR" --work-tree="$HOME" "$@"
+}
 
-if [ -d "$REPO" ]; then
-	echo "Dotfiles repo already exists."
-	confirm "Do you want to proceed?" || exit
-else
-	# enable colors for pacman
-	sudo sed -i 's/#Color/Color/' /etc/pacman.conf
-	# install git and openssh to clone repo via git ssh
-	# base-devel is for yay setup
-	sudo pacman --needed --noconfirm -Sy git openssh base-devel
-	# make sure that key permissions are correct
-	chmod 600 ~/key/ssh/*
-	# clone repo
-	git clone --bare git@github.com:heyskylark/dotfiles.git || exit 1
-	# configure work tree path
-	git --git-dir="$REPO" --work-tree="$HOME" config --local core.worktree "$HOME"
-	# checkout files into $HOME
-	git --git-dir="$REPO" --work-tree="$HOME" checkout -f
-	# enable GPG sign for dotfiles repo (commit signature verification)
-	~/.local/bin/github-enable-gpg
-	# set custom gitingore path
-	git --git-dir="$REPO" --work-tree="$HOME" config --local core.excludesFile "$HOME/dotfiles.gitignore"
+clone_if_missing() {
+  local url=$1
+  local destination=$2
+
+  if [[ -d "$destination/.git" ]]; then
+    return
+  fi
+  if [[ -e "$destination" ]]; then
+    printf 'warning: leaving existing non-Git path untouched: %s\n' "$destination" >&2
+    return
+  fi
+
+  git clone --depth 1 "$url" "$destination"
+}
+
+bootstrap_dotfiles() {
+  local backup_dir path
+
+  if [[ -d "$REPO_DIR" ]]; then
+    dotgit rev-parse --git-dir >/dev/null 2>&1 ||
+      die "$REPO_DIR exists but is not the dotfiles Git directory"
+  else
+    git clone --bare "$REPO_URL" "$REPO_DIR"
+
+    backup_dir="$BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)"
+    while IFS= read -r -d '' path; do
+      if [[ -e "$HOME/$path" || -L "$HOME/$path" ]]; then
+        mkdir -p "$backup_dir/$(dirname "$path")"
+        mv "$HOME/$path" "$backup_dir/$path"
+      fi
+    done < <(dotgit ls-tree -rz --name-only HEAD)
+
+    dotgit checkout
+    if [[ -d "$backup_dir" ]]; then
+      printf 'Existing files backed up under %s\n' "$backup_dir"
+    fi
+  fi
+
+  dotgit config --local status.showUntrackedFiles yes
+  if dotgit config --local --get-all core.excludesFile >/dev/null; then
+    dotgit config --local --unset-all core.excludesFile
+  fi
+}
+
+install_yay() {
+  local build_root
+
+  if command -v yay >/dev/null 2>&1; then
+    return
+  fi
+
+  build_root=$(mktemp -d)
+  trap 'rm -rf -- "$build_root"' EXIT
+  git clone --depth 1 https://aur.archlinux.org/yay.git "$build_root/yay"
+  (
+    cd "$build_root/yay"
+    makepkg -si --needed --noconfirm
+  )
+  rm -rf -- "$build_root"
+  trap - EXIT
+}
+
+install_packages() {
+  local -a packages
+
+  [[ -r "$PACKAGE_LIST" ]] || die "package list is not readable: $PACKAGE_LIST"
+  mapfile -t packages < <(sed -E '/^[[:space:]]*(#|$)/d' "$PACKAGE_LIST")
+  ((${#packages[@]} > 0)) || die "package list is empty: $PACKAGE_LIST"
+
+  yay -S --needed -- "${packages[@]}"
+}
+
+install_shell_files() {
+  local custom_dir="$HOME/.oh-my-zsh/custom"
+
+  clone_if_missing https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh"
+  clone_if_missing https://github.com/romkatv/powerlevel10k.git \
+    "$custom_dir/themes/powerlevel10k"
+  clone_if_missing https://github.com/zsh-users/zsh-autosuggestions.git \
+    "$custom_dir/plugins/zsh-autosuggestions"
+  clone_if_missing https://github.com/zsh-users/zsh-syntax-highlighting.git \
+    "$custom_dir/plugins/zsh-syntax-highlighting"
+}
+
+main() {
+  ((EUID != 0)) || die "run this script as your regular user, not root"
+  command -v pacman >/dev/null 2>&1 || die "this bootstrap supports Arch Linux only"
+  command -v sudo >/dev/null 2>&1 || die "sudo is required"
+
+  sudo -v
+  sudo pacman -Syu --needed git base-devel
+
+  bootstrap_dotfiles
+  install_yay
+  install_packages
+  install_shell_files
+
+  printf '\nBootstrap complete.\n'
+  printf 'Manual checks:\n'
+  printf '  - Run: chsh -s %s\n' "$(command -v zsh)"
+  printf '  - Run: gh auth login (for HTTPS Git pushes)\n'
+  printf '  - Enable only the system services this machine needs.\n'
+  printf '  - Put machine-local secrets in ~/.config/dotfiles/private.zsh.\n'
+  printf 'Log out or reboot after configuring services and the login shell.\n'
+}
+
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  main "$@"
 fi
-
-# install yay if not installed
-if ! command -v yay; then
-	# install yay
-	git clone https://aur.archlinux.org/yay.git
-	cd yay && makepkg -si --noconfirm && cd .. && rm -rf yay
-	yay -Y --gendb
-fi
-
-pkglist_file1="$HOME/pkglist-intel.txt"
-pkglist_file2="$HOME/pkglist-nvidia.txt"
-pkglist_file3="$HOME/pkglist-nvidia-xorg.txt"
-
-echo "Available package lists:"
-echo "1) $pkglist_file1"
-echo "2) $pkglist_file2"
-echo "3) $pkglist_file3"
-echo "Please select a package list (1-3):"
-
-# Read user input
-read selection
-
-# Determine the selected file
-case "$selection" in
-    1) PKG_FILE="$pkglist_file1" ;;
-    2) PKG_FILE="$pkglist_file2" ;;
-    3) PKG_FILE="$pkglist_file3" ;;
-    *) echo "Invalid selection. Exiting." >&2; exit 1 ;;
-esac
-
-confirm "Do you want to install packages from $PKG_FILE?" || exit
-
-# install packages
-# Note: --noconfirm can't be used, because you need to resolve conflicts
-# use /tmp/yay as build directory
-mkdir -p /tmp/yay
-# repeat command until it succeeds
-until yay -S --builddir /tmp/yay --needed --cleanmenu=false --diffmenu=false --editmenu=false --removemake=false - < "$PKG_FILE"; do
-	echo "Failed to install packages."
-	confirm "Do you want to retry?" || exit
-	yay -Syu
-done
-
-echo "Packages installed successfully."
-
-echo "Installing ohmyzsh..."
-sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/main/tools/install.sh)"
-git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
-git clone https://github.com/tom-doerr/zsh_codex.git ~/.oh-my-zsh/custom/plugins/zsh_codex
-
-# setup pacman hook to update pkglist file automatically
-pacman-setup-hooks "$PKG_FILE"
-
-# setup keepassxc password
-echo "Configuring secret-tool for KeePassXC"
-echo "Please enter KeePassXC database.kdbx password:"
-secret-tool store --label='KeePassXC' 'keepass' 'default'
-
-# gtk theme options
-gsettings set org.gnome.desktop.interface color-scheme prefer-dark
-gsettings set org.gtk.Settings.FileChooser startup-mode cwd
-gsettings set org.gtk.gtk4.Settings.FileChooser startup-mode cwd
-# gtk cursor and icon themes
-gsettings set org.gnome.desktop.interface cursor-theme BreezeX-RosePine-Linux
-gsettings set org.gnome.desktop.interface icon-theme 'bloom-classic'
-gsettings set org.gnome.desktop.interface cursor-size 32
-
-echo "Done. Consider re-login or reboot to apply all changes."
-

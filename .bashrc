@@ -10,4 +10,4 @@ alias grep='grep --color=auto'
 PS1='[\u@\h \W]\$ '
 
 alias dot='git --git-dir=$HOME/dotfiles --work-tree=$HOME'
-export PATH=$HOME/.npm-global/bin:$PATH
+export PATH="$HOME/.local/bin:$HOME/.local/share/npm-global/bin:$PATH"
